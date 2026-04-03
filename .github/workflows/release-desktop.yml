@@ -1,0 +1,131 @@
+name: Release Desktop
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  PRODUCT_NAME: 'AIRI'
+
+on:
+  release:
+    types:
+      - prereleased
+
+  workflow_dispatch:
+    inputs:
+      build_only:
+        description: Build only (no release upload)
+        required: false
+        default: false
+        type: boolean
+      platform:
+        description: Platform
+        type: choice
+        options:
+          - all
+          - windows
+          - macos
+          - linux
+
+jobs:
+  build:
+    name: Build - ${{ matrix.artifact }}
+    continue-on-error: ${{ matrix.skip }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            artifact: darwin-x64
+            target: x86_64-apple-darwin
+            arch: x64
+            builder-args: --macos --x64
+            skip: ${{ inputs.platform != '' && inputs.platform != 'all' && inputs.platform != 'macos' }}
+
+          - os: macos-15
+            artifact: darwin-arm64
+            target: aarch64-apple-darwin
+            builder-args: --macos --arm64
+            arch: arm64
+            skip: ${{ inputs.platform != '' && inputs.platform != 'all' && inputs.platform != 'macos' }}
+
+          - os: ubuntu-latest
+            artifact: linux-x64
+            target: x86_64-unknown-linux-gnu
+            builder-args: --linux --x64
+            arch: x64
+            skip: ${{ inputs.platform != '' && inputs.platform != 'all' && inputs.platform != 'linux' }}
+
+          - os: windows-latest
+            artifact: windows-x64-setup
+            target: x86_64-pc-windows-msvc
+            builder-args: --windows --x64
+            arch: x64
+            skip: ${{ inputs.platform != '' && inputs.platform != 'all' && inputs.platform != 'windows' }}
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Skip check
+        run: |
+          echo "Skipping build for ${{ matrix.os }}..."
+          exit ${{ matrix.skip && '1' || '0' }}
+
+      - name: Free Disk Space (Linux)
+        if: runner.os == 'Linux'
+        uses: jlumbroso/free-disk-space@main
+
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:packages
+
+      - name: Build Electron app
+        run: |
+          pnpm run -F @proj-airi/stage-tamagotchi build
+          pnpm -F @proj-airi/stage-tamagotchi exec electron-builder build ${{ matrix.builder-args }} --publish=${{ inputs.build_only && 'never' || 'onTagOrDraft' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing (set these secrets if you have an Apple Developer account)
+          CSC_LINK: ${{ secrets.CSC_CONTENT }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Rename artifacts
+        if: github.event_name == 'workflow_dispatch'
+        run: pnpm run -F @proj-airi/stage-tamagotchi rename-artifacts ${{ matrix.target }}
+
+      - name: Upload artifacts
+        if: github.event_name == 'workflow_dispatch' && !inputs.build_only
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.exe
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.zip
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.dmg
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.deb
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.rpm
+            apps/stage-tamagotchi/dist/latest-*.yml
+
+      - name: Upload to GitHub Releases
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.exe
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.zip
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.dmg
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.deb
+            apps/stage-tamagotchi/dist/${{ env.PRODUCT_NAME }}-*.rpm
+            apps/stage-tamagotchi/dist/latest-*.yml
+          append_body: true

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm run build:packages && pnpm -F @proj-airi/stage-web build",
+  "outputDirectory": "apps/stage-web/dist",
+  "rewrites": [
+    { "source": "/((?!docs|ui|remote-assets|api).*)", "destination": "/index.html" }
+  ]
+}

@@ -96,7 +96,7 @@ export default {
     name: 'ai.moeru.airi',
     main: 'out/main/index.js',
     homepage: 'https://airi.moeru.ai/docs/',
-    repository: 'https://github.com/moeru-ai/airi',
+    repository: 'https://github.com/flyinweb/airi',
     license: 'MIT',
   },
   win: {
@@ -125,10 +125,10 @@ export default {
     // an Apple Developer account, comment and uncomment the following 4 lines.
     // Later on when you obtained one, you can set up the necessary certificates and provisioning
     // profiles to enable these security features.
-    // hardenedRuntime: false,
-    hardenedRuntime: true,
-    // notarize: false,
-    notarize: true,
+    hardenedRuntime: false,
+    // hardenedRuntime: true,
+    notarize: false,
+    // notarize: true,
     executableName: 'airi',
     icon: useIconFormattedMacAppIcon ? 'icon.icon' : 'icon.icns',
   },
@@ -153,7 +153,7 @@ export default {
   npmRebuild: false,
   publish: {
     provider: 'github',
-    owner: 'moeru-ai',
+    owner: 'flyinweb',
     repo: 'airi',
     // NOTICE: `channel: 'latest-${arch}'` matters because electron-builder expands
     // `${arch}` before it writes any publish metadata, and electron-updater later

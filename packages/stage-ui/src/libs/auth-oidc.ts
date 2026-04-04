@@ -142,7 +142,12 @@ export async function refreshAccessToken(
   return await response.json()
 }
 
-// Session storage keys for PKCE flow state (survives page navigation during OAuth)
+// NOTICE: localStorage is used instead of sessionStorage because the OAuth
+// redirect chain crosses multiple origins (Vercel → Railway → Google → Railway → Vercel).
+// Some browsers (Safari ITP, Firefox ETP) clear sessionStorage during cross-origin
+// redirect chains, causing the PKCE state to be lost on the callback page.
+// localStorage survives cross-origin navigations within the same tab.
+// The state is consumed (deleted) immediately after the callback reads it.
 const FLOW_STATE_KEY = 'auth/v1/oidc-flow-state'
 const FLOW_PARAMS_KEY = 'auth/v1/oidc-flow-params'
 
@@ -150,22 +155,22 @@ const FLOW_PARAMS_KEY = 'auth/v1/oidc-flow-params'
  * Persist OIDC flow state before navigating to the authorization server.
  */
 export function persistFlowState(flowState: OIDCFlowState, params: OIDCFlowParams): void {
-  sessionStorage.setItem(FLOW_STATE_KEY, JSON.stringify(flowState))
-  sessionStorage.setItem(FLOW_PARAMS_KEY, JSON.stringify(params))
+  localStorage.setItem(FLOW_STATE_KEY, JSON.stringify(flowState))
+  localStorage.setItem(FLOW_PARAMS_KEY, JSON.stringify(params))
 }
 
 /**
  * Retrieve and clear persisted OIDC flow state after callback.
  */
 export function consumeFlowState(): { flowState: OIDCFlowState, params: OIDCFlowParams } | null {
-  const flowStateRaw = sessionStorage.getItem(FLOW_STATE_KEY)
-  const paramsRaw = sessionStorage.getItem(FLOW_PARAMS_KEY)
+  const flowStateRaw = localStorage.getItem(FLOW_STATE_KEY)
+  const paramsRaw = localStorage.getItem(FLOW_PARAMS_KEY)
 
   if (!flowStateRaw || !paramsRaw)
     return null
 
-  sessionStorage.removeItem(FLOW_STATE_KEY)
-  sessionStorage.removeItem(FLOW_PARAMS_KEY)
+  localStorage.removeItem(FLOW_STATE_KEY)
+  localStorage.removeItem(FLOW_PARAMS_KEY)
 
   return {
     flowState: JSON.parse(flowStateRaw),

@@ -28,6 +28,7 @@ import { useDelayMessageQueue, useEmotionsMessageQueue } from '../../composables
 import { useAuthProviderSync } from '../../composables/use-auth-provider-sync'
 import { llmInferenceEndToken } from '../../constants'
 import { EMOTION_EmotionMotionName_value, EMOTION_VRMExpressionName_value, EmotionThinkMotionName } from '../../constants/emotions'
+import { useEmotionBusStore } from '../../stores/emotion-bus'
 import { useAudioContext, useSpeakingStore } from '../../stores/audio'
 import { useChatOrchestratorStore } from '../../stores/chat'
 import { useAiriCardStore } from '../../stores/modules'
@@ -141,7 +142,14 @@ const emotionsQueue = createQueue<EmotionPayload>({
 const emotionMessageContentQueue = useEmotionsMessageQueue(emotionsQueue)
 emotionMessageContentQueue.onHandlerEvent('emotion', (emotion) => {
   // eslint-disable-next-line no-console
-  console.debug('emotion detected', emotion)
+  console.debug('emotion detected (token)', emotion)
+})
+
+// Wire LLM tool-call emotions (set_emotion tool) into the same queue
+const unsubscribeEmotionBus = useEmotionBusStore().on((payload) => {
+  // eslint-disable-next-line no-console
+  console.debug('emotion detected (tool)', payload)
+  emotionsQueue.enqueue(payload)
 })
 
 const delaysQueue = useDelayMessageQueue()
@@ -552,6 +560,7 @@ function readRenderTargetRegionAtClientPoint(clientX: number, clientY: number, r
 
 onUnmounted(() => {
   resetLive2dLipSync()
+  unsubscribeEmotionBus()
   chatHookCleanups.forEach(dispose => dispose?.())
   viewUpdateCleanups.forEach(dispose => dispose?.())
 })

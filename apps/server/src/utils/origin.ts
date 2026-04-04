@@ -23,6 +23,8 @@ const TRUSTED_ORIGIN_PATTERNS = [
   /^https:\/\/.*\.kwaa\.workers\.dev$/,
   // Vercel preview/production deployments
   /^https:\/\/.*\.vercel\.app$/,
+  // Railway deployments
+  /^https:\/\/.*\.up\.railway\.app$/,
 ]
 
 export function getTrustedOrigin(origin: string): string {

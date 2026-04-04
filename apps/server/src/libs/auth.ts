@@ -71,6 +71,20 @@ function buildWebRedirectUris(env: Env): string[] {
     // Invalid API_SERVER_URL — skip
   }
 
+  // If CLIENT_URL is set (frontend hosted separately from API),
+  // add its /auth/callback for OIDC redirect validation.
+  if (env.CLIENT_URL) {
+    try {
+      const clientOrigin = new URL(env.CLIENT_URL).origin
+      const derived = `${clientOrigin}/auth/callback`
+      if (!uris.has(derived))
+        uris.add(derived)
+    }
+    catch {
+      // Invalid CLIENT_URL — skip
+    }
+  }
+
   return [...uris]
 }
 

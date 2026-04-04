@@ -39,6 +39,7 @@ const EnvSchema = object({
   PORT: optionalIntegerFromString(3000, 'PORT', 1),
 
   API_SERVER_URL: optional(string(), 'http://localhost:3000'),
+  CLIENT_URL: optional(string()),
 
   DATABASE_URL: pipe(string(), nonEmpty('DATABASE_URL is required')),
   REDIS_URL: pipe(string(), nonEmpty('REDIS_URL is required')),

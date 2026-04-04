@@ -11,7 +11,7 @@ function getOriginFromUrl(url: string): string | undefined {
 
 const TRUSTED_EXACT_ORIGINS = [
   'capacitor://localhost', // Capacitor mobile (iOS)
-  'https://airi.moeru.ai', // Production
+  'https://airi.moeru.ai', // Production (moeru-ai)
 ]
 
 const TRUSTED_ORIGIN_PATTERNS = [
@@ -21,6 +21,8 @@ const TRUSTED_ORIGIN_PATTERNS = [
   /^http:\/\/127\.0\.0\.1(:\d+)?$/,
   // Cloudflare Workers subdomains
   /^https:\/\/.*\.kwaa\.workers\.dev$/,
+  // Vercel preview/production deployments
+  /^https:\/\/.*\.vercel\.app$/,
 ]
 
 export function getTrustedOrigin(origin: string): string {
@@ -54,11 +56,18 @@ export function resolveTrustedRequestOrigin(request: Request): string | undefine
   return undefined
 }
 
-export function getAuthTrustedOrigins(env: Pick<Env, 'API_SERVER_URL'>, request?: Request): string[] {
+export function getAuthTrustedOrigins(env: Pick<Env, 'API_SERVER_URL' | 'CLIENT_URL'>, request?: Request): string[] {
   const origins = new Set<string>()
   const apiServerOrigin = getOriginFromUrl(env.API_SERVER_URL)
   if (apiServerOrigin) {
     origins.add(apiServerOrigin)
+  }
+
+  if (env.CLIENT_URL) {
+    const clientOrigin = getOriginFromUrl(env.CLIENT_URL)
+    if (clientOrigin) {
+      origins.add(clientOrigin)
+    }
   }
 
   if (request) {
